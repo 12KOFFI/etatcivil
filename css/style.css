@@ -1,0 +1,195 @@
+/* Variables de couleurs */
+:root {
+  --orange: #ff8c00;
+  --vert: #28a745;
+  --blanc: #ffffff;
+}
+
+/* Styles généraux */
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+}
+
+/* Styles de la navigation */
+.navbar {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+  font-weight: bold;
+  font-size: 1.5rem;
+}
+
+/* Styles de la section héro */
+.hero-section {
+  padding: 80px 0;
+}
+
+.hero-section h1 {
+  margin-bottom: 1.5rem;
+}
+
+/* Styles des cartes de services */
+.card {
+  transition: transform 0.3s ease;
+  border: none;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.card:hover {
+  transform: translateY(-5px);
+}
+
+.card-title {
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+/* Styles des boutons */
+.btn-success {
+  background-color: var(--vert);
+  border-color: var(--vert);
+}
+
+.btn-outline-success {
+  color: var(--vert);
+  border-color: var(--vert);
+}
+
+.btn-outline-success:hover {
+  background-color: var(--vert);
+  color: var(--blanc);
+}
+
+/* Styles du footer */
+.footer {
+  margin-top: 4rem;
+}
+
+.footer a {
+  text-decoration: none;
+  transition: opacity 0.3s ease;
+}
+
+.footer a:hover {
+  opacity: 0.8;
+}
+
+/* Styles des formulaires multi-étapes */
+.multi-step-form {
+  position: relative;
+}
+
+.form-step {
+  display: none;
+  animation: fadeIn 0.5s ease;
+}
+
+.form-step.active {
+  display: block;
+}
+
+.progress {
+  height: 4px;
+  margin-bottom: 2rem;
+  background-color: #e9ecef;
+}
+
+.progress-bar {
+  background-color: var(--orange);
+  transition: width 0.3s ease;
+}
+
+.step-indicator {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.step {
+  text-align: center;
+  flex: 1;
+  position: relative;
+}
+
+.step:not(:last-child):after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #e9ecef;
+  z-index: 1;
+}
+
+.step-number {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #e9ecef;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.step.active .step-number {
+  background-color: var(--orange);
+  color: white;
+}
+
+.step.completed .step-number {
+  background-color: var(--vert);
+  color: white;
+}
+
+.step-label {
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+
+.step.active .step-label {
+  color: var(--orange);
+  font-weight: 600;
+}
+
+.form-navigation {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Styles responsifs */
+@media (max-width: 768px) {
+  .hero-section {
+    padding: 40px 0;
+  }
+
+  .hero-section h1 {
+    font-size: 2rem;
+  }
+
+  .step-label {
+    display: none;
+  }
+
+  .step:not(:last-child):after {
+    width: 50%;
+  }
+}
