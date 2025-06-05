@@ -217,14 +217,21 @@ $paiement = $stmt->fetch();
                         <?php endif; ?>
 
                         <!-- Actions -->
-                        <?php if ($demande['statut'] === 'en_attente' && !$paiement): ?>
-                        <div class="d-grid gap-2">
-                            <a href="../paiement.php?numero_acte=<?php echo $demande['numero_acte']; ?>&type_acte=<?php echo $demande['type_acte']; ?>" 
-                               class="btn btn-success">
-                                Procéder au paiement
-                            </a>
+                        <div class="card">
+                            <div class="card-body">
+                                <?php if ($demande['statut'] === 'en_attente' && !$demande['paiement_effectue']): ?>
+                                    <a href="../paiement.php?numero_acte=<?php echo urlencode($demande['numero_acte']); ?>&type_acte=<?php echo urlencode($demande['type_acte']); ?>&nombre_copies=<?php echo urlencode($demande['nombre_copies']); ?>&demande_id=<?php echo urlencode($demande['id']); ?>" 
+                                       class="btn btn-primary">
+                                        Procéder au paiement
+                                    </a>
+                                <?php elseif ($demande['statut'] === 'valide'): ?>
+                                    <a href="../download_pdf.php?id=<?php echo urlencode($demande['id']); ?>" 
+                                       class="btn btn-success" target="_blank">
+                                        Télécharger l'acte
+                                    </a>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                        <?php endif; ?>
                     </div>
                 </div>
             </div>

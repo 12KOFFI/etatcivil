@@ -14,26 +14,7 @@ $stmt->execute([$_SESSION['user_id']]);
 $user = $stmt->fetch();
 
 // Récupération des demandes de l'utilisateur
-$stmt = $conn->prepare("SELECT d.*, 
-    CASE 
-        WHEN d.type_acte = 'naissance' THEN an.nom
-        WHEN d.type_acte = 'mariage' THEN am.nom_epoux
-        WHEN d.type_acte = 'deces' THEN ad.nom_defunt
-    END as nom,
-    CASE 
-        WHEN d.type_acte = 'naissance' THEN an.prenoms
-        WHEN d.type_acte = 'mariage' THEN am.prenoms_epoux
-        WHEN d.type_acte = 'deces' THEN ad.prenoms_defunt
-    END as prenoms,
-    p.numero_transaction,
-    p.date_paiement
-    FROM demandes d
-    LEFT JOIN actes_naissance an ON d.numero_acte = an.numero_acte AND d.type_acte = 'naissance'
-    LEFT JOIN actes_mariage am ON d.numero_acte = am.numero_acte AND d.type_acte = 'mariage'
-    LEFT JOIN actes_deces ad ON d.numero_acte = ad.numero_acte AND d.type_acte = 'deces'
-    LEFT JOIN paiements p ON d.numero_acte = p.numero_acte AND d.type_acte = p.type_acte
-    WHERE d.utilisateur_id = ? 
-    ORDER BY d.date_demande DESC");
+$stmt = $conn->prepare("SELECT * FROM demandes WHERE utilisateur_id = ? ORDER BY date_demande DESC");
 $stmt->execute([$_SESSION['user_id']]);
 $demandes = $stmt->fetchAll();
 ?>
@@ -44,6 +25,7 @@ $demandes = $stmt->fetchAll();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tableau de bord - Espace Citoyen</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
@@ -88,6 +70,29 @@ $demandes = $stmt->fetchAll();
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <h4 class="card-title mb-4">Bienvenue, <?php echo htmlspecialchars($user['prenoms'] . ' ' . $user['nom']); ?></h4>
+                        
+                        <!-- Messages de notification -->
+                        <?php if (isset($_SESSION['success'])): ?>
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <?php 
+                                echo htmlspecialchars($_SESSION['success']);
+                                unset($_SESSION['success']);
+                                ?>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if (isset($_SESSION['error'])): ?>
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <?php 
+                                echo htmlspecialchars($_SESSION['error']);
+                                unset($_SESSION['error']);
+                                ?>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        <?php endif; ?>
                         
                         <!-- Statistiques -->
                         <div class="row mb-4">
@@ -142,8 +147,9 @@ $demandes = $stmt->fetchAll();
                             <table class="table table-hover">
                                 <thead>
                                     <tr>
-                                        <th>Type</th>
+                                        <th>Type d'acte</th>
                                         <th>Date de demande</th>
+                                        <th>Nombre de copies</th>
                                         <th>Statut</th>
                                         <th>Actions</th>
                                     </tr>
@@ -151,17 +157,23 @@ $demandes = $stmt->fetchAll();
                                 <tbody>
                                     <?php if (empty($demandes)): ?>
                                         <tr>
-                                            <td colspan="6" class="text-center">Aucune demande trouvée</td>
+                                            <td colspan="5" class="text-center">Aucune demande trouvée</td>
                                         </tr>
                                     <?php else: ?>
                                         <?php foreach ($demandes as $demande): ?>
                                         <tr>
-                                            <td><?php echo ucfirst($demande['type_acte']); ?></td>
+                                            <td>
+                                                <?php echo ucfirst($demande['type_acte']); ?>
+                                                <?php if (isset($demande['type_demande']) && $demande['type_demande'] === 'duplicata'): ?>
+                                                    <span class="badge bg-info">Duplicata</span>
+                                                <?php endif; ?>
+                                            </td>
                                             <td><?php echo date('d/m/Y', strtotime($demande['date_demande'])); ?></td>
+                                            <td><?php echo $demande['nombre_copies']; ?></td>
                                             <td>
                                                 <span class="badge bg-<?php 
                                                     echo $demande['statut'] === 'valide' ? 'success' : 
-                                                        ($demande['statut'] === 'en_cours' ? 'warning' : 'danger'); 
+                                                        ($demande['statut'] === 'en_cours' ? 'warning' : 'primary'); 
                                                 ?>">
                                                     <?php echo ucfirst($demande['statut']); ?>
                                                 </span>
@@ -175,6 +187,10 @@ $demandes = $stmt->fetchAll();
                                                     <a href="../download_pdf.php?type=<?php echo $demande['type_acte']; ?>&id=<?php echo $demande['id']; ?>" 
                                                        class="btn btn-sm btn-success">
                                                         <i class="fas fa-download"></i> Télécharger
+                                                    </a>
+                                                    <a href="demande_duplicata.php?demande_id=<?php echo $demande['id']; ?>" 
+                                                       class="btn btn-sm btn-primary">
+                                                        <i class="fas fa-copy"></i> Duplicata
                                                     </a>
                                                 <?php endif; ?>
                                             </td>

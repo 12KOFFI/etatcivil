@@ -8,21 +8,84 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Vérifier si un numéro d'acte est fourni
-if (!isset($_GET['numero_acte']) || !isset($_GET['type_acte'])) {
+// Débogage des paramètres reçus
+error_log("=== Début du traitement paiement.php ===");
+error_log("Session ID: " . session_id());
+error_log("GET parameters: " . print_r($_GET, true));
+error_log("Session data: " . print_r($_SESSION, true));
+
+// Vérification des paramètres requis
+$required_params = ['numero_acte', 'type_acte'];
+$missing_params = [];
+
+foreach ($required_params as $param) {
+    if (!isset($_GET[$param]) || empty($_GET[$param])) {
+        $missing_params[] = $param;
+    }
+}
+
+// Récupération de l'ID de la demande
+$demande_id = null;
+
+// D'abord essayer depuis l'URL
+if (isset($_GET['demande_id']) && !empty($_GET['demande_id'])) {
+    $demande_id = trim($_GET['demande_id']);
+    error_log("ID de la demande trouvé dans l'URL : " . $demande_id);
+}
+// Sinon, essayer depuis la session
+elseif (isset($_SESSION['temp_demande_id'])) {
+    $demande_id = $_SESSION['temp_demande_id'];
+    error_log("ID de la demande récupéré depuis la session : " . $demande_id);
+}
+
+if (!$demande_id) {
+    error_log("Aucun ID de demande trouvé (ni dans l'URL, ni dans la session)");
+    $missing_params[] = 'demande_id';
+}
+
+if (!empty($missing_params)) {
+    error_log("Paramètres manquants dans paiement.php : " . implode(', ', $missing_params));
+    $_SESSION['error'] = "Paramètres manquants : " . implode(', ', $missing_params) . ". Veuillez recommencer le processus de demande.";
     header('Location: citoyen/dashboard.php');
     exit();
 }
 
-$numero_acte = $_GET['numero_acte'];
-$type_acte = $_GET['type_acte'];
+$numero_acte = trim($_GET['numero_acte']);
+$type_acte = trim($_GET['type_acte']);
+$nombre_copies = isset($_GET['nombre_copies']) ? max(2, intval($_GET['nombre_copies'])) : 2;
+
+// Vérifier que la demande existe dans la base de données
+try {
+    $verify_stmt = $conn->prepare("SELECT id, numero_demande FROM demandes WHERE id = ? AND utilisateur_id = ? AND type_acte = ?");
+    $verify_stmt->execute([$demande_id, $_SESSION['user_id'], $type_acte]);
+    $demande = $verify_stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$demande) {
+        error_log("Demande non trouvée en base de données. ID: " . $demande_id . ", User: " . $_SESSION['user_id'] . ", Type: " . $type_acte);
+        throw new Exception("Demande non trouvée. Veuillez recommencer le processus de demande.");
+    }
+
+    error_log("Demande trouvée en base de données : " . print_r($demande, true));
+} catch (Exception $e) {
+    error_log("Erreur lors de la vérification de la demande : " . $e->getMessage());
+    $_SESSION['error'] = $e->getMessage();
+    header('Location: citoyen/dashboard.php');
+    exit();
+}
+
+// Nettoyage de la variable temporaire de session
+if (isset($_SESSION['temp_demande_id'])) {
+    unset($_SESSION['temp_demande_id']);
+}
+
+error_log("Paramètres validés :");
+error_log("numero_acte: " . $numero_acte);
+error_log("type_acte: " . $type_acte);
+error_log("demande_id: " . $demande_id);
+error_log("nombre_copies: " . $nombre_copies);
 
 // Prix de base par copie
 $prix_base = 500;
-
-// Récupérer le nombre de copies depuis l'URL ou le formulaire
-$nombre_copies = isset($_GET['nombre_copies']) ? max(2, intval($_GET['nombre_copies'])) : 
-                (isset($_POST['nombre_copies']) ? max(2, intval($_POST['nombre_copies'])) : 2);
 
 // Calculer le montant total
 $montant = $prix_base * $nombre_copies;
@@ -71,12 +134,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $numero_transaction = 'PAY' . date('YmdHis');
 
             // Vérifier si la demande existe déjà
-            $stmt = $conn->prepare("SELECT id FROM demandes WHERE numero_acte = ? AND type_acte = ? AND utilisateur_id = ?");
-            $stmt->execute([$numero_acte, $type_acte, $_SESSION['user_id']]);
+            $stmt = $conn->prepare("SELECT id FROM demandes WHERE id = ? AND type_acte = ? AND utilisateur_id = ?");
+            $stmt->execute([$demande_id, $type_acte, $_SESSION['user_id']]);
             $demande = $stmt->fetch();
 
             if (!$demande) {
-                // Si la demande n'existe pas, c'est une erreur car elle devrait être créée dans la page de demande
                 throw new Exception("Demande non trouvée. Veuillez recommencer le processus de demande.");
             }
 
@@ -87,12 +149,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 date_traitement = NOW(),
                 montant = ?,
                 nombre_copies = ?
-                WHERE numero_acte = ? AND type_acte = ? AND utilisateur_id = ?");
+                WHERE id = ? AND type_acte = ? AND utilisateur_id = ?");
             
             $stmt->execute([
                 $montant,
                 $nombre_copies,
-                $numero_acte,
+                $demande_id,
                 $type_acte,
                 $_SESSION['user_id']
             ]);

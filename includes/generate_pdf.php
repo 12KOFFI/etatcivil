@@ -7,13 +7,23 @@ class PDFGenerator extends TCPDF {
         // Logo en haut à gauche
         $this->Image(__DIR__ . '/../assets/images/logo-district.png', 10, 10, 30);
         
-        // Titre centré
-        $this->SetFont('times', 'B', 16);
-        $this->Cell(0, 15, 'RÉPUBLIQUE DE CÔTE D\'IVOIRE', 0, false, 'C', 0, '', 0, false, 'M', 'M');
-        $this->Ln(10);
+        // En-tête officiel centré
         $this->SetFont('times', 'B', 14);
-        $this->Cell(0, 10, 'ACTE D\'ÉTAT CIVIL', 0, false, 'C', 0, '', 0, false, 'M', 'M');
-        $this->Ln(20);
+        $this->Cell(0, 10, 'RÉPUBLIQUE DE CÔTE D\'IVOIRE', 0, 1, 'C');
+        $this->SetFont('times', '', 11);
+        $this->Cell(0, 8, 'Union - Travail - Progrès', 0, 1, 'C');
+        
+        $this->Ln(5);
+        
+        // District/Commune
+        $this->SetFont('times', 'B', 12);
+        $this->Cell(0, 8, 'DISTRICT AUTONOME D\'ABIDJAN', 0, 1, 'C');
+        $this->SetFont('times', 'B', 11);
+        $this->Cell(0, 8, 'COMMUNE DE YOPOUGON', 0, 1, 'C');
+       
+       
+        
+        $this->Ln(15);
     }
 
     public function Footer() {
@@ -118,6 +128,7 @@ function generateActePDF($type, $demande_id) {
 
 function generateActeNaissance($pdf, $demande) {
     $pdf->SetFont('times', 'B', 14);
+    $pdf->Ln(5);
     $pdf->Cell(0, 10, 'EXTRAIT ACTE DE NAISSANCE', 0, 1, 'C');
     $pdf->Ln(10);
 
@@ -166,17 +177,33 @@ function generateActeNaissance($pdf, $demande) {
     $pdf->Cell(60, 10, 'Date d\'établissement:', 0);
     
 
-    // Zone de certification
-    $pdf->Ln(20);
-    $pdf->SetFont('times', '', 12);
-    $pdf->Ln(20);
-    $pdf->Cell(0, 10, 'Signature de l\'officier d\'état civil', 0, 1, 'R');
-    $pdf->Ln(10);
-    $pdf->Cell(0, 10, '_____________________________', 0, 1, 'R');
+   // Zone de certification
+$pdf->Ln(30); // Espace avant la zone
+$pdf->SetFont('times', '', 12);
+$pdf->Cell(0, 10, 'Délivré à Yopougon, le ' . date('d/m/Y', strtotime($demande['date_demande'])), 0, 1, 'R');
+
+// Texte d'accompagnement
+$pdf->Cell(0, 10, 'Signature de l\'officier d\'état civil', 0, 1, 'R');
+
+// Positionner la signature juste en dessous de la ligne précédente
+// On récupère la position actuelle après le texte
+$ySignature = $pdf->GetY() - 10; // Ajouter un espace de 10 mm
+
+// Définir le chemin vers l'image
+$signaturePath = __DIR__ . '/../assets/images/signature.png';
+
+// Ajustement de la position de l’image
+// X = 150 pour bien coller à droite, Y = position actuelle ($ySignature)
+$signatureWidth = 50; // Largeur de l'image en mm
+$pdf->Image($signaturePath, 150, $ySignature, $signatureWidth);
+
+// Optionnel : ajouter un petit texte ou une ligne en dessous
+$pdf->Ln(30); // Espace après la signature
 }
 
 function generateActeMariage($pdf, $demande) {
     $pdf->SetFont('times', 'B', 14);
+    $pdf->Ln(5);
     $pdf->Cell(0, 10, 'EXTRAIT ACTE DE MARIAGE', 0, 1, 'C');
     $pdf->Ln(10);
 
@@ -244,8 +271,9 @@ function generateActeMariage($pdf, $demande) {
    
    
 // Zone de certification
-$pdf->Ln(20); // Espace avant la zone
+$pdf->Ln(5); // Espace avant la zone
 $pdf->SetFont('times', '', 12);
+$pdf->Cell(0, 10, 'Délivré à Yopougon, le ' . date('d/m/Y', strtotime($demande['date_demande'])), 0, 1, 'R');
 
 // Texte d'accompagnement
 $pdf->Cell(0, 10, 'Signature de l\'officier d\'état civil', 0, 1, 'R');
@@ -269,6 +297,7 @@ $pdf->Ln(30); // Espace après la signature
 
 function generateActeDeces($pdf, $demande) {
     $pdf->SetFont('times', 'B', 14);
+    $pdf->Ln(5);
     $pdf->Cell(0, 10, 'EXTRAIT ACTE DE DÉCÈS', 0, 1, 'C');
     $pdf->Ln(10);
 
@@ -321,14 +350,28 @@ function generateActeDeces($pdf, $demande) {
     
     
 
-    // Zone de certification
-    $pdf->Ln(20);
-    $pdf->SetFont('times', '', 12);
-   
-    $pdf->Ln(20);
-    $pdf->Cell(0, 10, 'Signature de l\'officier d\'état civil', 0, 1, 'R');
-    $pdf->Ln(10);
-    $pdf->Cell(0, 10, '_____________________________', 0, 1, 'R');
+  // Zone de certification
+$pdf->Ln(5); // Espace avant la zone
+$pdf->SetFont('times', '', 12);
+$pdf->Cell(0, 10, 'Délivré à Yopougon, le ' . date('d/m/Y', strtotime($demande['date_demande'])), 0, 1, 'R');
+
+// Texte d'accompagnement
+$pdf->Cell(0, 10, 'Signature de l\'officier d\'état civil', 0, 1, 'R');
+
+// Positionner la signature juste en dessous de la ligne précédente
+// On récupère la position actuelle après le texte
+$ySignature = $pdf->GetY() - 10; // Ajouter un espace de 10 mm
+
+// Définir le chemin vers l'image
+$signaturePath = __DIR__ . '/../assets/images/signature.png';
+
+// Ajustement de la position de l’image
+// X = 150 pour bien coller à droite, Y = position actuelle ($ySignature)
+$signatureWidth = 50; // Largeur de l'image en mm
+$pdf->Image($signaturePath, 150, $ySignature, $signatureWidth);
+
+// Optionnel : ajouter un petit texte ou une ligne en dessous
+$pdf->Ln(30); // Espace après la signature
 }
 
 // Fonction pour télécharger le PDF

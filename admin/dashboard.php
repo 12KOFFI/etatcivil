@@ -15,25 +15,19 @@ try {
     $stats = $stmt->fetch(PDO::FETCH_ASSOC);
 
     // Demandes récentes (toutes confondues)
-    $stmt = $conn->query("
-        (SELECT 'naissance' as type, a.numero_acte, d.date_demande as date_etablissement, d.statut 
-         FROM actes_naissance a 
-         JOIN demandes d ON a.numero_acte = d.numero_acte 
-         WHERE d.type_acte = 'naissance' AND d.statut = 'en_attente'
-         ORDER BY d.date_demande DESC LIMIT 5)
-        UNION ALL
-        (SELECT 'mariage' as type, a.numero_acte, d.date_demande as date_etablissement, d.statut 
-         FROM actes_mariage a 
-         JOIN demandes d ON a.numero_acte = d.numero_acte 
-         WHERE d.type_acte = 'mariage' AND d.statut = 'en_attente'
-         ORDER BY d.date_demande DESC LIMIT 5)
-        UNION ALL
-        (SELECT 'deces' as type, a.numero_acte, d.date_demande as date_etablissement, d.statut 
-         FROM actes_deces a 
-         JOIN demandes d ON a.numero_acte = d.numero_acte 
-         WHERE d.type_acte = 'deces' AND d.statut = 'en_attente'
-         ORDER BY d.date_demande DESC LIMIT 5)
-        ORDER BY date_etablissement DESC LIMIT 10");
+    $stmt = $conn->prepare("
+        SELECT 
+            id,
+            type_acte as type,
+            numero_acte,
+            date_demande,
+            statut
+        FROM demandes 
+        WHERE statut = 'en_attente'
+        ORDER BY date_demande DESC 
+        LIMIT 5
+    ");
+    $stmt->execute();
     $demandes_recentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
@@ -229,7 +223,7 @@ require_once 'includes/sidebar.php';
                                     <td><?php echo htmlspecialchars($demande['numero_acte']); ?></td>
                                     <td>
                                         <i class="bi bi-calendar2 me-1"></i>
-                                        <?php echo date('d/m/Y', strtotime($demande['date_etablissement'])); ?>
+                                        <?php echo date('d/m/Y', strtotime($demande['date_demande'])); ?>
                                     </td>
                                     <td>
                                         <span class="badge bg-warning">

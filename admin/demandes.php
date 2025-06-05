@@ -1,6 +1,11 @@
 <?php
 require_once 'includes/header.php';
 
+// Ajouter cette fonction helper en haut du fichier, juste après require_once 'includes/header.php';
+function safe_html($value) {
+    return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
+}
+
 // Traitement des actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     try {
@@ -36,9 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 break;
 
             case 'modifier':
-                $type_acte = filter_input(INPUT_POST, 'type_acte', FILTER_SANITIZE_STRING);
-                $numero_acte = filter_input(INPUT_POST, 'numero_acte', FILTER_SANITIZE_STRING);
-                $commentaire = filter_input(INPUT_POST, 'commentaire', FILTER_SANITIZE_STRING);
+                $type_acte = htmlspecialchars(trim($_POST['type_acte'] ?? ''), ENT_QUOTES, 'UTF-8');
+                $numero_acte = htmlspecialchars(trim($_POST['numero_acte'] ?? ''), ENT_QUOTES, 'UTF-8');
+                $commentaire = htmlspecialchars(trim($_POST['commentaire'] ?? ''), ENT_QUOTES, 'UTF-8');
                 $nombre_copies = filter_input(INPUT_POST, 'nombre_copies', FILTER_VALIDATE_INT);
                 $montant = filter_input(INPUT_POST, 'montant', FILTER_VALIDATE_FLOAT);
 
@@ -61,8 +66,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $_SESSION['error'] = $e->getMessage();
     }
     
-    header('Location: demandes.php');
-    exit();
+    if (!headers_sent()) {
+        header('Location: demandes.php');
+        exit();
+    } else {
+        echo '<script>window.location.href = "demandes.php";</script>';
+        exit();
+    }
 }
 
 // Traitement des filtres
@@ -72,22 +82,11 @@ $date_debut = isset($_GET['date_debut']) ? $_GET['date_debut'] : '';
 $date_fin = isset($_GET['date_fin']) ? $_GET['date_fin'] : '';
 
 // Construction de la requête SQL
-$sql = "SELECT d.*, 
-        CASE 
-            WHEN d.type_acte = 'naissance' THEN an.nom
-            WHEN d.type_acte = 'mariage' THEN am.nom_epoux
-            WHEN d.type_acte = 'deces' THEN ad.nom_defunt
-        END as nom,
-        CASE 
-            WHEN d.type_acte = 'naissance' THEN an.prenoms
-            WHEN d.type_acte = 'mariage' THEN am.prenoms_epoux
-            WHEN d.type_acte = 'deces' THEN ad.prenoms_defunt
-        END as prenoms
-        FROM demandes d
-        LEFT JOIN actes_naissance an ON d.numero_acte = an.numero_acte AND d.type_acte = 'naissance'
-        LEFT JOIN actes_mariage am ON d.numero_acte = am.numero_acte AND d.type_acte = 'mariage'
-        LEFT JOIN actes_deces ad ON d.numero_acte = ad.numero_acte AND d.type_acte = 'deces'
-        WHERE 1=1";
+$sql = "SELECT d.* FROM demandes d WHERE 1=1 AND (
+    (d.type_acte = 'naissance' AND EXISTS (SELECT 1 FROM actes_naissance an WHERE d.numero_acte = an.numero_acte)) OR
+    (d.type_acte = 'mariage' AND EXISTS (SELECT 1 FROM actes_mariage am WHERE d.numero_acte = am.numero_acte)) OR
+    (d.type_acte = 'deces' AND EXISTS (SELECT 1 FROM actes_deces ad WHERE d.numero_acte = ad.numero_acte))
+)";
 
 $params = [];
 
@@ -111,7 +110,20 @@ if ($date_fin) {
     $params[] = $date_fin;
 }
 
-$sql .= " ORDER BY d.date_demande DESC";
+// Ajout d'une sous-requête pour récupérer les noms et prénoms
+$sql = "SELECT d.*,
+    CASE 
+        WHEN d.type_acte = 'naissance' THEN (SELECT nom FROM actes_naissance WHERE numero_acte = d.numero_acte)
+        WHEN d.type_acte = 'mariage' THEN (SELECT nom_epoux FROM actes_mariage WHERE numero_acte = d.numero_acte)
+        WHEN d.type_acte = 'deces' THEN (SELECT nom_defunt FROM actes_deces WHERE numero_acte = d.numero_acte)
+    END as nom,
+    CASE 
+        WHEN d.type_acte = 'naissance' THEN (SELECT prenoms FROM actes_naissance WHERE numero_acte = d.numero_acte)
+        WHEN d.type_acte = 'mariage' THEN (SELECT prenoms_epoux FROM actes_mariage WHERE numero_acte = d.numero_acte)
+        WHEN d.type_acte = 'deces' THEN (SELECT prenoms_defunt FROM actes_deces WHERE numero_acte = d.numero_acte)
+    END as prenoms
+FROM (" . $sql . ") d
+ORDER BY d.date_demande DESC";
 
 try {
     $stmt = $conn->prepare($sql);
@@ -132,7 +144,7 @@ require_once 'includes/sidebar.php';
         <h1><i class="fas fa-tasks me-2"></i>Gestion des demandes</h1>
         <div class="text-muted">
             <i class="fas fa-calendar me-1"></i>
-            <?php echo htmlspecialchars(date('d/m/Y')); ?>
+            <?php echo safe_html(date('d/m/Y')); ?>
         </div>
     </div>
 
@@ -140,7 +152,7 @@ require_once 'includes/sidebar.php';
         <div class="alert alert-success">
             <i class="fas fa-check-circle me-2"></i>
             <?php 
-            echo htmlspecialchars($_SESSION['success']);
+            echo safe_html($_SESSION['success']);
             unset($_SESSION['success']);
             ?>
         </div>
@@ -150,7 +162,7 @@ require_once 'includes/sidebar.php';
         <div class="alert alert-danger">
             <i class="fas fa-exclamation-triangle me-2"></i>
             <?php 
-            echo htmlspecialchars($_SESSION['error']);
+            echo safe_html($_SESSION['error']);
             unset($_SESSION['error']);
             ?>
         </div>
@@ -159,7 +171,7 @@ require_once 'includes/sidebar.php';
     <?php if (isset($error)): ?>
         <div class="alert alert-danger">
             <i class="fas fa-exclamation-triangle me-2"></i>
-            <?php echo htmlspecialchars($error); ?>
+            <?php echo safe_html($error); ?>
         </div>
     <?php endif; ?>
 
@@ -209,229 +221,219 @@ require_once 'includes/sidebar.php';
         </div>
     </div>
 
-    <!-- Liste des demandes -->
+    <!-- Tableau des demandes -->
     <div class="card shadow">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
+                <table class="table table-hover">
+                    <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Type</th>
-                            <th>Nom</th>
-                            <th>Prénoms</th>
+                            <th>N° Demande</th>
+                            <th>Type de demande</th>
+                            <th>Type d'acte</th>
+                            <th>N° Acte</th>
+                            <th>Nom et Prénoms</th>
                             <th>Date demande</th>
                             <th>Statut</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if (empty($demandes)): ?>
+                        <?php foreach ($demandes as $demande): ?>
                             <tr>
-                                <td colspan="7" class="text-center py-4">
-                                    <i class="fas fa-inbox fa-3x text-muted d-block mb-2"></i>
-                                    Aucune demande trouvée
+                                <td><?php echo safe_html($demande['numero_demande']); ?></td>
+                                <td>
+                                    <?php if ($demande['type_demande'] === 'duplicata'): ?>
+                                        <span class="badge bg-info">Duplicata</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-secondary">Standard</span>
+                                    <?php endif; ?>
                                 </td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($demandes as $demande): ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars($demande['id']); ?></td>
-                                    <td>
-                                        <span class="badge bg-<?php 
-                                            echo htmlspecialchars($demande['type_acte']) === 'naissance' ? 'primary' : 
-                                                (htmlspecialchars($demande['type_acte']) === 'mariage' ? 'success' : 'danger'); 
-                                        ?>">
-                                            <i class="fas fa-<?php 
-                                                echo htmlspecialchars($demande['type_acte']) === 'naissance' ? 'baby' : 
-                                                    (htmlspecialchars($demande['type_acte']) === 'mariage' ? 'heart' : 'skull'); 
-                                            ?> me-1"></i>
-                                            <?php echo htmlspecialchars(ucfirst($demande['type_acte'])); ?>
-                                        </span>
-                                    </td>
-                                    <td><?php echo htmlspecialchars($demande['nom']); ?></td>
-                                    <td><?php echo htmlspecialchars($demande['prenoms']); ?></td>
-                                    <td>
-                                        <i class="fas fa-calendar me-1"></i>
-                                        <?php echo htmlspecialchars(date('d/m/Y', strtotime($demande['date_demande']))); ?>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-<?php 
-                                            echo htmlspecialchars($demande['statut']) === 'en_attente' ? 'warning' : 
-                                                (htmlspecialchars($demande['statut']) === 'en_cours' ? 'info' : 
-                                                (htmlspecialchars($demande['statut']) === 'valide' ? 'success' : 'danger')); 
-                                        ?>">
-                                            <i class="fas fa-<?php 
-                                                echo htmlspecialchars($demande['statut']) === 'en_attente' ? 'clock' : 
-                                                    (htmlspecialchars($demande['statut']) === 'en_cours' ? 'spinner' : 
-                                                    (htmlspecialchars($demande['statut']) === 'valide' ? 'check' : 'times')); 
-                                            ?> me-1"></i>
-                                            <?php echo htmlspecialchars(ucfirst($demande['statut'])); ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group">
-                                            <a href="voir_demande.php?id=<?php echo htmlspecialchars($demande['id']); ?>" 
-                                               class="btn btn-sm btn-primary" 
+                                <td><?php echo safe_html(ucfirst($demande['type_acte'])); ?></td>
+                                <td><?php echo safe_html($demande['numero_acte']); ?></td>
+                                <td><?php echo safe_html($demande['nom'] . ' ' . $demande['prenoms']); ?></td>
+                                <td><?php echo safe_html(date('d/m/Y', strtotime($demande['date_demande']))); ?></td>
+                                <td>
+                                    <?php
+                                    $statut_class = [
+                                        'en_attente' => 'bg-warning',
+                                        'en_cours' => 'bg-primary',
+                                        'valide' => 'bg-success',
+                                        'rejete' => 'bg-danger'
+                                    ];
+                                    $statut_text = [
+                                        'en_attente' => 'En attente',
+                                        'en_cours' => 'En cours',
+                                        'valide' => 'Validée',
+                                        'rejete' => 'Rejetée'
+                                    ];
+                                    ?>
+                                    <span class="badge <?php echo $statut_class[$demande['statut']]; ?>">
+                                        <?php echo $statut_text[$demande['statut']]; ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="voir_demande.php?id=<?php echo safe_html($demande['id']); ?>" 
+                                           class="btn btn-sm btn-primary" 
+                                           data-bs-toggle="tooltip"
+                                           data-bs-placement="top"
+                                           title="Voir les détails">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <?php if (safe_html($demande['statut']) === 'en_attente' || safe_html($demande['statut']) === 'en_cours'): ?>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-success" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#validerModal<?php echo safe_html($demande['id']); ?>"
+                                                    data-bs-toggle="tooltip"
+                                                    data-bs-placement="top"
+                                                    title="Valider la demande">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-danger" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#rejeterModal<?php echo safe_html($demande['id']); ?>"
+                                                    data-bs-toggle="tooltip"
+                                                    data-bs-placement="top"
+                                                    title="Rejeter la demande">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-warning" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#modifierModal<?php echo safe_html($demande['id']); ?>"
+                                                    data-bs-toggle="tooltip"
+                                                    data-bs-placement="top"
+                                                    title="Modifier la demande">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        <?php endif; ?>
+                                        <?php if (safe_html($demande['statut']) === 'valide'): ?>
+                                            <a href="../download_pdf.php?type=<?php echo safe_html($demande['type_acte']); ?>&id=<?php echo safe_html($demande['id']); ?>" 
+                                               class="btn btn-sm btn-success"
                                                data-bs-toggle="tooltip"
                                                data-bs-placement="top"
-                                               title="Voir les détails">
-                                                <i class="fas fa-eye"></i>
+                                               title="Télécharger le PDF">
+                                                <i class="fas fa-download"></i>
                                             </a>
-                                            <?php if (htmlspecialchars($demande['statut']) === 'en_attente' || htmlspecialchars($demande['statut']) === 'en_cours'): ?>
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-success" 
-                                                        data-bs-toggle="modal" 
-                                                        data-bs-target="#validerModal<?php echo htmlspecialchars($demande['id']); ?>"
-                                                        data-bs-toggle="tooltip"
-                                                        data-bs-placement="top"
-                                                        title="Valider la demande">
-                                                    <i class="fas fa-check"></i>
-                                                </button>
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-danger" 
-                                                        data-bs-toggle="modal" 
-                                                        data-bs-target="#rejeterModal<?php echo htmlspecialchars($demande['id']); ?>"
-                                                        data-bs-toggle="tooltip"
-                                                        data-bs-placement="top"
-                                                        title="Rejeter la demande">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-warning" 
-                                                        data-bs-toggle="modal" 
-                                                        data-bs-target="#modifierModal<?php echo htmlspecialchars($demande['id']); ?>"
-                                                        data-bs-toggle="tooltip"
-                                                        data-bs-placement="top"
-                                                        title="Modifier la demande">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                            <?php endif; ?>
-                                            <?php if (htmlspecialchars($demande['statut']) === 'valide'): ?>
-                                                <a href="../download_pdf.php?type=<?php echo htmlspecialchars($demande['type_acte']); ?>&id=<?php echo htmlspecialchars($demande['id']); ?>" 
-                                                   class="btn btn-sm btn-success"
-                                                   data-bs-toggle="tooltip"
-                                                   data-bs-placement="top"
-                                                   title="Télécharger le PDF">
-                                                    <i class="fas fa-download"></i>
-                                                </a>
-                                            <?php endif; ?>
-                                        </div>
+                                        <?php endif; ?>
+                                    </div>
 
-                                        <!-- Modal de validation -->
-                                        <div class="modal fade" id="validerModal<?php echo htmlspecialchars($demande['id']); ?>" tabindex="-1">
-                                            <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title">Valider la demande</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        <p>Êtes-vous sûr de vouloir valider cette demande ?</p>
-                                                        <p><strong>Type d'acte :</strong> <?php echo htmlspecialchars(ucfirst($demande['type_acte'])); ?></p>
-                                                        <p><strong>Nom :</strong> <?php echo htmlspecialchars($demande['nom']); ?></p>
-                                                        <p><strong>Prénoms :</strong> <?php echo htmlspecialchars($demande['prenoms']); ?></p>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <form method="POST">
-                                                            <input type="hidden" name="demande_id" value="<?php echo htmlspecialchars($demande['id']); ?>">
-                                                            <input type="hidden" name="action" value="valider">
+                                    <!-- Modal de validation -->
+                                    <div class="modal fade" id="validerModal<?php echo safe_html($demande['id']); ?>" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Valider la demande</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p>Êtes-vous sûr de vouloir valider cette demande ?</p>
+                                                    <p><strong>Type d'acte :</strong> <?php echo safe_html(ucfirst($demande['type_acte'])); ?></p>
+                                                    <p><strong>Nom :</strong> <?php echo safe_html($demande['nom']); ?></p>
+                                                    <p><strong>Prénoms :</strong> <?php echo safe_html($demande['prenoms']); ?></p>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <form method="POST">
+                                                        <input type="hidden" name="demande_id" value="<?php echo safe_html($demande['id']); ?>">
+                                                        <input type="hidden" name="action" value="valider">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                        <button type="submit" class="btn btn-success">Valider</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Modal de rejet -->
+                                    <div class="modal fade" id="rejeterModal<?php echo safe_html($demande['id']); ?>" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Rejeter la demande</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <form method="POST">
+                                                        <input type="hidden" name="demande_id" value="<?php echo safe_html($demande['id']); ?>">
+                                                        <input type="hidden" name="action" value="rejeter">
+                                                        
+                                                        <div class="mb-3">
+                                                            <label for="motif_rejet" class="form-label">Motif du rejet</label>
+                                                            <textarea class="form-control" id="motif_rejet" name="motif_rejet" rows="3" required 
+                                                                      placeholder="Veuillez indiquer le motif du rejet..."></textarea>
+                                                        </div>
+
+                                                        <div class="text-end">
                                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                                                            <button type="submit" class="btn btn-success">Valider</button>
-                                                        </form>
-                                                    </div>
+                                                            <button type="submit" class="btn btn-danger">Rejeter</button>
+                                                        </div>
+                                                    </form>
                                                 </div>
                                             </div>
                                         </div>
+                                    </div>
 
-                                        <!-- Modal de rejet -->
-                                        <div class="modal fade" id="rejeterModal<?php echo htmlspecialchars($demande['id']); ?>" tabindex="-1">
-                                            <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title">Rejeter la demande</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        <form method="POST">
-                                                            <input type="hidden" name="demande_id" value="<?php echo htmlspecialchars($demande['id']); ?>">
-                                                            <input type="hidden" name="action" value="rejeter">
-                                                            
-                                                            <div class="mb-3">
-                                                                <label for="motif_rejet" class="form-label">Motif du rejet</label>
-                                                                <textarea class="form-control" id="motif_rejet" name="motif_rejet" rows="3" required 
-                                                                          placeholder="Veuillez indiquer le motif du rejet..."></textarea>
-                                                            </div>
+                                    <!-- Modal de modification -->
+                                    <div class="modal fade" id="modifierModal<?php echo safe_html($demande['id']); ?>" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Modifier la demande</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <form method="POST">
+                                                        <input type="hidden" name="demande_id" value="<?php echo safe_html($demande['id']); ?>">
+                                                        <input type="hidden" name="action" value="modifier">
+                                                        
+                                                        <div class="mb-3">
+                                                            <label for="type_acte" class="form-label">Type d'acte</label>
+                                                            <select class="form-select" id="type_acte" name="type_acte" required>
+                                                                <option value="naissance" <?php echo safe_html($demande['type_acte']) === 'naissance' ? 'selected' : ''; ?>>Acte de naissance</option>
+                                                                <option value="mariage" <?php echo safe_html($demande['type_acte']) === 'mariage' ? 'selected' : ''; ?>>Acte de mariage</option>
+                                                                <option value="deces" <?php echo safe_html($demande['type_acte']) === 'deces' ? 'selected' : ''; ?>>Acte de décès</option>
+                                                            </select>
+                                                        </div>
 
-                                                            <div class="text-end">
-                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                                                                <button type="submit" class="btn btn-danger">Rejeter</button>
-                                                            </div>
-                                                        </form>
-                                                    </div>
+                                                        <div class="mb-3">
+                                                            <label for="numero_acte" class="form-label">Numéro d'acte</label>
+                                                            <input type="text" class="form-control" id="numero_acte" name="numero_acte" 
+                                                                   value="<?php echo safe_html($demande['numero_acte']); ?>" required>
+                                                        </div>
+
+                                                        <div class="mb-3">
+                                                            <label for="nombre_copies" class="form-label">Nombre de copies</label>
+                                                            <input type="number" class="form-control" id="nombre_copies" name="nombre_copies" 
+                                                                   value="<?php echo safe_html($demande['nombre_copies']); ?>" min="1" required>
+                                                        </div>
+
+                                                        <div class="mb-3">
+                                                            <label for="montant" class="form-label">Montant</label>
+                                                            <input type="number" class="form-control" id="montant" name="montant" 
+                                                                   value="<?php echo safe_html($demande['montant']); ?>" step="0.01" required>
+                                                        </div>
+
+                                                        <div class="mb-3">
+                                                            <label for="commentaire" class="form-label">Commentaire</label>
+                                                            <textarea class="form-control" id="commentaire" name="commentaire" rows="3"
+                                                                      placeholder="Ajouter un commentaire..."><?php echo safe_html($demande['commentaire'] ?? ''); ?></textarea>
+                                                        </div>
+
+                                                        <div class="text-end">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                            <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                                        </div>
+                                                    </form>
                                                 </div>
                                             </div>
                                         </div>
-
-                                        <!-- Modal de modification -->
-                                        <div class="modal fade" id="modifierModal<?php echo htmlspecialchars($demande['id']); ?>" tabindex="-1">
-                                            <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title">Modifier la demande</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        <form method="POST">
-                                                            <input type="hidden" name="demande_id" value="<?php echo htmlspecialchars($demande['id']); ?>">
-                                                            <input type="hidden" name="action" value="modifier">
-                                                            
-                                                            <div class="mb-3">
-                                                                <label for="type_acte" class="form-label">Type d'acte</label>
-                                                                <select class="form-select" id="type_acte" name="type_acte" required>
-                                                                    <option value="naissance" <?php echo htmlspecialchars($demande['type_acte']) === 'naissance' ? 'selected' : ''; ?>>Acte de naissance</option>
-                                                                    <option value="mariage" <?php echo htmlspecialchars($demande['type_acte']) === 'mariage' ? 'selected' : ''; ?>>Acte de mariage</option>
-                                                                    <option value="deces" <?php echo htmlspecialchars($demande['type_acte']) === 'deces' ? 'selected' : ''; ?>>Acte de décès</option>
-                                                                </select>
-                                                            </div>
-
-                                                            <div class="mb-3">
-                                                                <label for="numero_acte" class="form-label">Numéro d'acte</label>
-                                                                <input type="text" class="form-control" id="numero_acte" name="numero_acte" 
-                                                                       value="<?php echo htmlspecialchars($demande['numero_acte']); ?>" required>
-                                                            </div>
-
-                                                            <div class="mb-3">
-                                                                <label for="nombre_copies" class="form-label">Nombre de copies</label>
-                                                                <input type="number" class="form-control" id="nombre_copies" name="nombre_copies" 
-                                                                       value="<?php echo htmlspecialchars($demande['nombre_copies']); ?>" min="1" required>
-                                                            </div>
-
-                                                            <div class="mb-3">
-                                                                <label for="montant" class="form-label">Montant</label>
-                                                                <input type="number" class="form-control" id="montant" name="montant" 
-                                                                       value="<?php echo htmlspecialchars($demande['montant']); ?>" step="0.01" required>
-                                                            </div>
-
-                                                            <div class="mb-3">
-                                                                <label for="commentaire" class="form-label">Commentaire</label>
-                                                                <textarea class="form-control" id="commentaire" name="commentaire" rows="3"
-                                                                          placeholder="Ajouter un commentaire..."><?php echo htmlspecialchars($demande['commentaire'] ?? ''); ?></textarea>
-                                                            </div>
-
-                                                            <div class="text-end">
-                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                                                                <button type="submit" class="btn btn-primary">Enregistrer</button>
-                                                            </div>
-                                                        </form>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>

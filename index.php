@@ -86,7 +86,7 @@
                     <a href="services.php" class="btn btn-success btn-lg">Commencer</a>
                 </div>
                 <div class="col-md-6">
-                    <img src="assets/images/hero-image.jpg" alt="État Civil CI" class="img-fluid rounded">
+                    <img src="assets/images/sv muni.png" alt="État Civil CI" class="img-fluid rounded">
                 </div>
             </div>
         </div>

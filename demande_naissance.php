@@ -8,16 +8,24 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+// Fonction de nettoyage des chaînes
+function sanitize_input($data) {
+    $data = trim($data);
+    $data = stripslashes($data);
+    $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+    return $data;
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $nom = filter_var($_POST['nom'], FILTER_SANITIZE_STRING);
-    $prenoms = filter_var($_POST['prenoms'], FILTER_SANITIZE_STRING);
+    $nom = sanitize_input($_POST['nom']);
+    $prenoms = sanitize_input($_POST['prenoms']);
     $date_naissance = $_POST['date_naissance'];
-    $lieu_naissance = filter_var($_POST['lieu_naissance'], FILTER_SANITIZE_STRING);
-    $nom_pere = filter_var($_POST['nom_pere'], FILTER_SANITIZE_STRING);
-    $nom_mere = filter_var($_POST['nom_mere'], FILTER_SANITIZE_STRING);
-    $commune = filter_var($_POST['commune'], FILTER_SANITIZE_STRING);
-    $declarant = filter_var($_POST['declarant'], FILTER_SANITIZE_STRING);
-    $lien_declarant = filter_var($_POST['lien_declarant'], FILTER_SANITIZE_STRING);
+    $lieu_naissance = sanitize_input($_POST['lieu_naissance']);
+    $nom_pere = sanitize_input($_POST['nom_pere']);
+    $nom_mere = sanitize_input($_POST['nom_mere']);
+    $commune = sanitize_input($_POST['commune']);
+    $declarant = sanitize_input($_POST['declarant']);
+    $lien_declarant = sanitize_input($_POST['lien_declarant']);
     $nombre_copies = max(2, intval($_POST['nombre_copies']));
 
     $errors = [];
@@ -50,9 +58,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $nom_pere, $nom_mere, $commune, $declarant, $lien_declarant,
                 $nombre_copies
             ])) {
-                $_SESSION['success'] = "Votre demande d'acte de naissance a été enregistrée avec succès. Numéro de demande : " . $numero_acte;
-                header('Location: paiement.php?numero_acte=' . $numero_acte . '&type_acte=naissance');
-                exit();
+                // Créer l'entrée dans la table demandes
+                $stmt = $conn->prepare("INSERT INTO demandes (
+                    numero_demande, type_acte, numero_acte, utilisateur_id,
+                    date_demande, statut, nombre_copies, montant
+                ) VALUES (?, ?, ?, ?, NOW(), ?, ?, ?)");
+                
+                $montant = $nombre_copies * 500; // 500 FCFA par copie
+                
+                if ($stmt->execute([
+                    $numero_acte,
+                    'naissance',
+                    $numero_acte,
+                    $_SESSION['user_id'],
+                    'en_attente',
+                    $nombre_copies,
+                    $montant
+                ])) {
+                    $_SESSION['success'] = "Votre demande d'acte de naissance a été enregistrée avec succès. Numéro de demande : " . $numero_acte;
+                    header('Location: paiement.php?numero_acte=' . $numero_acte . '&type_acte=naissance');
+                    exit();
+                } else {
+                    $errors[] = "Une erreur est survenue lors de l'enregistrement de la demande";
+                }
             } else {
                 $errors[] = "Une erreur est survenue lors de l'enregistrement de la demande";
             }
@@ -120,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <div class="step-indicator">
                                 <div class="step">
                                     <div class="step-number">1</div>
-                                    <div class="step-label">Informations de l'enfant</div>
+                                    <div class="step-label">Informations sur la personne concernée</div>
                                 </div>
                                 <div class="step">
                                     <div class="step-number">2</div>
@@ -132,9 +160,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 </div>
                             </div>
 
-                            <!-- Étape 1: Informations de l'enfant -->
+                            <!-- Étape 1: Informations sur la personne concernée -->
                             <div class="form-step">
-                                <h4 class="mb-4">Informations de l'enfant</h4>
+                                <h4 class="mb-4">Informations sur la personne concernée</h4>
                                 <div class="mb-3">
                                     <label for="nom" class="form-label">Nom</label>
                                     <input type="text" class="form-control" id="nom" name="nom" required>

@@ -23,6 +23,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $lien_declarant = htmlspecialchars($_POST['lien_declarant'], ENT_QUOTES, 'UTF-8');
     $nombre_copies = max(2, intval($_POST['nombre_copies']));
 
+    error_log("=== Début du traitement de la demande de décès ===");
+    error_log("Données reçues : " . print_r($_POST, true));
+
     $errors = [];
 
     // Validation des données
@@ -39,14 +42,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if ($nombre_copies < 2) $errors[] = "Le nombre minimum de copies est de 2";
 
     if (empty($errors)) {
-        // Générer un numéro d'acte unique
-        $numero_acte = 'D' . date('Ymd') . rand(1000, 9999);
-        // Générer un numéro de demande unique
-        $numero_demande = 'DEM' . date('Ymd') . rand(1000, 9999);
-
         try {
             // Début de la transaction
             $conn->beginTransaction();
+
+            // Générer un numéro d'acte unique
+            $numero_acte = 'D' . date('Ymd') . rand(1000, 9999);
+            
+            // Générer un numéro de demande unique
+            $annee = date('Y');
+            $mois = date('m');
+            
+            // Récupérer le dernier numéro de demande pour ce mois
+            $stmt = $conn->prepare("
+                SELECT MAX(CAST(SUBSTRING_INDEX(numero_demande, '-', -1) AS UNSIGNED)) as dernier_numero
+                FROM demandes 
+                WHERE numero_demande LIKE :prefix
+            ");
+            $prefix = "DEM-{$annee}{$mois}-";
+            $stmt->execute(['prefix' => $prefix . '%']);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            $nouveau_numero = ($result['dernier_numero'] ?? 0) + 1;
+            $numero_demande = $prefix . str_pad($nouveau_numero, 4, '0', STR_PAD_LEFT);
+
+            error_log("Numéro de demande généré : " . $numero_demande);
 
             // Insérer dans la table actes_deces
             $stmt = $conn->prepare("INSERT INTO actes_deces (
@@ -61,6 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $date_naissance_defunt, $lieu_naissance_defunt, $commune, $cause_deces,
                 $nombre_copies, $declarant, $lien_declarant
             ]);
+
+            error_log("Acte de décès inséré avec succès");
 
             // Insérer dans la table demandes
             $stmt = $conn->prepare("INSERT INTO demandes (
@@ -77,18 +99,56 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $nombre_copies
             ]);
 
+            $demande_id = $conn->lastInsertId();
+            error_log("Demande insérée avec succès - ID: " . $demande_id);
+
+            if (!$demande_id) {
+                throw new PDOException("Erreur : Impossible de récupérer l'ID de la demande.");
+            }
+
+            // Vérifier que la demande existe bien
+            $verify_stmt = $conn->prepare("SELECT id FROM demandes WHERE id = ? AND utilisateur_id = ?");
+            $verify_stmt->execute([$demande_id, $_SESSION['user_id']]);
+            $demande_exists = $verify_stmt->fetch();
+
+            if (!$demande_exists) {
+                throw new PDOException("Erreur : La demande créée n'a pas été trouvée dans la base de données.");
+            }
+
             // Validation de la transaction
             $conn->commit();
 
+            // Stocker l'ID dans la session
+            $_SESSION['temp_demande_id'] = $demande_id;
+            $_SESSION['last_demande_numero'] = $numero_demande;
+
+            error_log("Redirection vers la page de paiement...");
+            error_log("demande_id: " . $demande_id);
+            error_log("numero_acte: " . $numero_acte);
+            error_log("nombre_copies: " . $nombre_copies);
+
             $_SESSION['success'] = "Votre demande d'acte de décès a été enregistrée avec succès. Numéro de demande : " . $numero_demande;
-            header('Location: paiement.php?numero_acte=' . $numero_acte . '&type_acte=deces&nombre_copies=' . $nombre_copies);
+            
+            // Redirection vers la page de paiement
+            $redirect_url = sprintf(
+                'paiement.php?numero_acte=%s&type_acte=deces&nombre_copies=%d&demande_id=%d',
+                urlencode($numero_acte),
+                $nombre_copies,
+                $demande_id
+            );
+
+            error_log("URL de redirection : " . $redirect_url);
+            header("Location: " . $redirect_url);
             exit();
+
         } catch (PDOException $e) {
-            // En cas d'erreur, annulation de la transaction
             $conn->rollBack();
-            $errors[] = "Une erreur est survenue : " . $e->getMessage();
-            error_log("Erreur lors de l'enregistrement de la demande de décès : " . $e->getMessage());
+            error_log("Erreur lors de la création de la demande : " . $e->getMessage());
+            error_log("Stack trace : " . $e->getTraceAsString());
+            $errors[] = "Une erreur est survenue lors de la création de la demande : " . $e->getMessage();
         }
+    } else {
+        error_log("Erreurs de validation : " . print_r($errors, true));
     }
 }
 ?>

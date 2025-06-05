@@ -44,18 +44,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     break;
                     
                 case 'supprimer':
-                    // Vérifier si l'utilisateur a des demandes associées
-                    $stmt = $conn->prepare("SELECT COUNT(*) FROM demandes WHERE user_id = ?");
-                    $stmt->execute([$user_id]);
-                    $has_demandes = $stmt->fetchColumn() > 0;
-
-                    if ($has_demandes) {
-                        throw new Exception("Impossible de supprimer un utilisateur ayant des demandes associées");
+                    // Commencer une transaction
+                    $conn->beginTransaction();
+                    
+                    try {
+                        // Supprimer les références dans actes_naissance
+                        $stmt = $conn->prepare("DELETE FROM actes_naissance WHERE utilisateur_id = ?");
+                        $stmt->execute([$user_id]);
+                        
+                        // Supprimer les références dans actes_mariage
+                        $stmt = $conn->prepare("DELETE FROM actes_mariage WHERE utilisateur_id = ?");
+                        $stmt->execute([$user_id]);
+                        
+                        // Supprimer les références dans actes_deces
+                        $stmt = $conn->prepare("DELETE FROM actes_deces WHERE utilisateur_id = ?");
+                        $stmt->execute([$user_id]);
+                        
+                        // Supprimer les paiements associés
+                        $stmt = $conn->prepare("DELETE FROM paiements WHERE utilisateur_id = ?");
+                        $stmt->execute([$user_id]);
+                        
+                        // Supprimer les demandes associées
+                        $stmt = $conn->prepare("DELETE FROM demandes WHERE utilisateur_id = ?");
+                        $stmt->execute([$user_id]);
+                        
+                        // Supprimer les notifications de l'utilisateur
+                        $stmt = $conn->prepare("DELETE FROM notifications WHERE utilisateur_id = ?");
+                        $stmt->execute([$user_id]);
+                        
+                        // Finalement, supprimer l'utilisateur
+                        $stmt = $conn->prepare("DELETE FROM utilisateurs WHERE id = ?");
+                        $stmt->execute([$user_id]);
+                        
+                        // Valider la transaction
+                        $conn->commit();
+                        $_SESSION['success'] = "L'utilisateur et toutes ses données associées ont été supprimés avec succès.";
+                    } catch (Exception $e) {
+                        // En cas d'erreur, annuler toutes les modifications
+                        $conn->rollBack();
+                        throw new Exception("Erreur lors de la suppression : " . $e->getMessage());
                     }
-
-                    $stmt = $conn->prepare("DELETE FROM utilisateurs WHERE id = ?");
-                    $stmt->execute([$user_id]);
-                    $_SESSION['success'] = "L'utilisateur a été supprimé avec succès.";
                     break;
             }
         } catch (Exception $e) {
