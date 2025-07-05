@@ -52,11 +52,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                     <i class="bi bi-graph-up"></i> Rapports
                 </a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link <?php echo $current_page === 'documents.php' ? 'active' : ''; ?>" href="documents.php">
-                    <i class="bi bi-file-earmark"></i> Documents
-                </a>
-            </li>
+           
             <li class="nav-item">
                 <a class="nav-link <?php echo $current_page === 'notifications.php' ? 'active' : ''; ?>" href="notifications.php">
                     <i class="bi bi-bell"></i> Notifications

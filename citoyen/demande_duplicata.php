@@ -67,7 +67,7 @@ if ($demande_id > 0) {
                 <?php endif; ?>
 
                 <div class="card shadow">
-                    <div class="card-header bg-primary text-white">
+                    <div class="card-header" style="background-color: #FF8C00;color: white">
                         <h4 class="mb-0"><i class="fas fa-copy me-2"></i>Demande de duplicata</h4>
                     </div>
                     <div class="card-body">
@@ -128,7 +128,7 @@ if ($demande_id > 0) {
 
                             <div class="text-end">
                                 <a href="dashboard.php" class="btn btn-secondary me-2">Annuler</a>
-                                <button type="submit" class="btn btn-primary">Continuer vers le paiement</button>
+                                <button type="submit" class="btn btn-success">Continuer vers le paiement</button>
                             </div>
                         </form>
                     </div>

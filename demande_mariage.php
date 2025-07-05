@@ -88,12 +88,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $nombre_copies
             ]);
 
+            // Récupérer l'ID de la demande créée
+            $stmt = $conn->prepare("SELECT id FROM demandes WHERE numero_demande = ?");
+            $stmt->execute([$numero_demande]);
+            $demande = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($demande) {
+                $_SESSION['demande_id'] = $demande['id'];
+            }
+
             // Validation de la transaction
             $conn->commit();
 
-            $_SESSION['success'] = "Votre demande d'acte de mariage a été enregistrée avec succès. Numéro de demande : " . $numero_demande;
-            header('Location: paiement.php?numero_acte=' . $numero_acte . '&type_acte=mariage&nombre_copies=' . $nombre_copies);
-            exit();
+            // Récupérer l'ID de la demande
+            $stmt = $conn->prepare("SELECT id FROM demandes WHERE numero_demande = ?");
+            $stmt->execute([$numero_demande]);
+            $demande = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($demande) {
+                $_SESSION['temp_demande_id'] = $demande['id'];
+                $_SESSION['success'] = "Votre demande d'acte de mariage a été enregistrée avec succès. Numéro de demande : " . $numero_demande;
+                header('Location: paiement.php?numero_acte=' . $numero_acte . '&type_acte=mariage&nombre_copies=' . $nombre_copies . '&demande_id=' . $demande['id']);
+                exit();
+            } else {
+                $errors[] = "Erreur : Impossible de récupérer l'ID de la demande";
+            }
         } catch (PDOException $e) {
             // En cas d'erreur, annulation de la transaction
             $conn->rollBack();
@@ -181,12 +200,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     <input type="date" class="form-control" id="date_mariage" name="date_mariage" required>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="lieu_mariage" class="form-label">Lieu du mariage</label>
+                                    <label for="lieu_mariage" class="form-label">centre d'etat civil</label>
                                     <input type="text" class="form-control" id="lieu_mariage" name="lieu_mariage" required>
                                 </div>
                                 <div class="mb-3">
                                     <label for="commune" class="form-label">Commune</label>
-                                    <input type="text" class="form-control" id="commune" name="commune" required>
+                                    <input type="text" class="form-control" id="commune" name="commune" required value="Yopougon">
                                 </div>
                                 <div class="form-navigation">
                                     <button type="button" class="btn btn-success next-step">Suivant</button>

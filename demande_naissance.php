@@ -75,9 +75,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $nombre_copies,
                     $montant
                 ])) {
-                    $_SESSION['success'] = "Votre demande d'acte de naissance a été enregistrée avec succès. Numéro de demande : " . $numero_acte;
-                    header('Location: paiement.php?numero_acte=' . $numero_acte . '&type_acte=naissance');
-                    exit();
+                    // Récupérer l'ID de la demande
+                    $stmt = $conn->prepare("SELECT id FROM demandes WHERE numero_demande = ?");
+                    $stmt->execute([$numero_acte]);
+                    $demande = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($demande) {
+                        $_SESSION['temp_demande_id'] = $demande['id'];
+                        $_SESSION['success'] = "Votre demande d'acte de naissance a été enregistrée avec succès. Numéro de demande : " . $numero_acte;
+                        header('Location: paiement.php?numero_acte=' . $numero_acte . '&type_acte=naissance&demande_id=' . $demande['id']);
+                        exit();
+                    } else {
+                        $errors[] = "Erreur : Impossible de récupérer l'ID de la demande";
+                    }
                 } else {
                     $errors[] = "Une erreur est survenue lors de l'enregistrement de la demande";
                 }

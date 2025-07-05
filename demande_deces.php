@@ -210,7 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <div class="step-indicator">
                                 <div class="step">
                                     <div class="step-number">1</div>
-                                    <div class="step-label">Informations personnelles</div>
+                                    <div class="step-label">Informations personnelles du défunt</div>
                                 </div>
                                 <div class="step">
                                     <div class="step-number">2</div>
@@ -224,7 +224,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                             <!-- Étape 1: Informations personnelles -->
                             <div class="form-step">
-                                <h4 class="mb-4">Informations personnelles</h4>
+                                <h4 class="mb-4">Informations personnelles du défunt</h4>
                                 <div class="mb-3">
                                     <label for="nom" class="form-label">Nom</label>
                                     <input type="text" class="form-control" id="nom" name="nom" required>

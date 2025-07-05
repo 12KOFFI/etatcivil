@@ -144,27 +144,6 @@ CREATE TABLE IF NOT EXISTS demandes (
     INDEX idx_statut (statut)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Table des documents
-CREATE TABLE IF NOT EXISTS documents (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    type_acte ENUM('naissance', 'mariage', 'deces') NOT NULL,
-    numero_acte VARCHAR(50) NOT NULL,
-    nom_fichier VARCHAR(255) NOT NULL,
-    type_document VARCHAR(50) NOT NULL,
-    chemin_fichier VARCHAR(255) NOT NULL,
-    date_upload DATETIME NOT NULL,
-    taille_fichier INT NOT NULL,
-    mime_type VARCHAR(100) NOT NULL,
-    description TEXT,
-    utilisateur_id INT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id),
-    INDEX idx_type_acte (type_acte),
-    INDEX idx_numero_acte (numero_acte),
-    INDEX idx_date_upload (date_upload)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- Table des notifications
 CREATE TABLE IF NOT EXISTS notifications (
     id INT AUTO_INCREMENT PRIMARY KEY,

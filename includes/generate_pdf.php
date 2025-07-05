@@ -174,13 +174,39 @@ function generateActeNaissance($pdf, $demande) {
     $pdf->Cell(60, 10, 'Numéro d\'acte:', 0);
     $pdf->Cell(0, 10, $demande['numero_acte'], 0, 1);
     
-    $pdf->Cell(60, 10, 'Date d\'établissement:', 0);
+    $pdf->Cell(60, 10, 'CENTRE DE :', 0);
+    $pdf->Cell(0, 10, 'SELMER', 0, 1);
+    $pdf->Cell(60, 10, 'NAISSANCE DE :', 0);
+    $pdf->Cell(0, 10, $demande['nom_enfant'] . ' ' . $demande['prenoms_enfant'], 0, 1);
     
 
-   // Zone de certification
-$pdf->Ln(30); // Espace avant la zone
-$pdf->SetFont('times', '', 12);
-$pdf->Cell(0, 10, 'Délivré à Yopougon, le ' . date('d/m/Y', strtotime($demande['date_demande'])), 0, 1, 'R');
+    // Ajouter le timbre
+    // Récupère la hauteur de la page
+$pageHeight = $pdf->getPageHeight();
+
+// Calcule la position Y pour placer l’image en bas
+$y = $pageHeight - 40 - 10; // 40 = hauteur du timbre, 10 = marge
+
+// Place l’image en bas à gauche
+$pdf->Image(
+    __DIR__ . '/../assets/images/timbrenew.png', // Chemin vers l’image
+    20,     // X = 10 mm depuis le bord gauche
+    $y,     // Y calculé dynamiquement pour coller le bas
+    60,     // Largeur
+    30,     // Hauteur
+    'PNG',  // Format
+    '',     // Lien
+    '',     // Alignement
+    true,   // Resize
+    300,    // Résolution
+    '', false, false, 0, false, false, false
+);
+
+
+    // Zone de certification
+    $pdf->Ln(30); // Espace avant la zone
+    $pdf->SetFont('times', '', 12);
+    $pdf->Cell(0, 10, 'Délivré à Yopougon, le ' . date('d/m/Y', strtotime($demande['date_demande'])), 0, 1, 'R');
 
 // Texte d'accompagnement
 $pdf->Cell(0, 10, 'Signature de l\'officier d\'état civil', 0, 1, 'R');
@@ -262,12 +288,27 @@ function generateActeMariage($pdf, $demande) {
     $pdf->Cell(60, 10, 'Numéro d\'acte:', 0);
     $pdf->Cell(0, 10, $demande['numero_acte'], 0, 1);
     
-    $pdf->Cell(60, 10, 'Nombre de copies:', 0);
-    $pdf->Cell(0, 10, $demande['nombre_copies'], 0, 1);
-    
   
    
-    
+    $pageHeight = $pdf->getPageHeight();
+
+// Calcule la position Y pour placer l’image en bas
+$y = $pageHeight - 38 - 10; // 40 = hauteur du timbre, 10 = marge
+
+// Place l’image en bas à gauche
+$pdf->Image(
+    __DIR__ . '/../assets/images/timbrenew.png', // Chemin vers l’image
+    20,     // X = 10 mm depuis le bord gauche
+    $y,     // Y calculé dynamiquement pour coller le bas
+    40,     // Largeur
+    30,     // Hauteur
+    'PNG',  // Format
+    '',     // Lien
+    '',     // Alignement
+    true,   // Resize
+    300,    // Résolution
+    '', false, false, 0, false, false, false
+);
    
    
 // Zone de certification
@@ -349,9 +390,28 @@ function generateActeDeces($pdf, $demande) {
     $pdf->Cell(0, 10, $demande['numero_acte'], 0, 1);
     
     
+    $pageHeight = $pdf->getPageHeight();
+
+// Calcule la position Y pour placer l’image en bas
+$y = $pageHeight - 40 - 10; // 40 = hauteur du timbre, 10 = marge
+
+// Place l’image en bas à gauche
+$pdf->Image(
+    __DIR__ . '/../assets/images/timbrenew.png', // Chemin vers l’image
+    20,     // X = 10 mm depuis le bord gauche
+    $y,     // Y calculé dynamiquement pour coller le bas
+    60,     // Largeur
+    30,     // Hauteur
+    'PNG',  // Format
+    '',     // Lien
+    '',     // Alignement
+    true,   // Resize
+    300,    // Résolution
+    '', false, false, 0, false, false, false
+);
 
   // Zone de certification
-$pdf->Ln(5); // Espace avant la zone
+$pdf->Ln(30); // Espace avant la zone
 $pdf->SetFont('times', '', 12);
 $pdf->Cell(0, 10, 'Délivré à Yopougon, le ' . date('d/m/Y', strtotime($demande['date_demande'])), 0, 1, 'R');
 

@@ -8,10 +8,76 @@ Cette application web permet la gestion numérique des actes d'état civil en C�
 - Demande d'actes de naissance en ligne
 - Demande d'actes de mariage en ligne
 - Demande d'actes de décès en ligne
+- Demande de duplicata d'actes
 - Suivi des demandes
 - Interface d'administration
 - Génération de documents PDF
 - Système de paiement intégré
+- Gestion des utilisateurs et des rôles
+
+## Types d'utilisateurs et leurs accès
+
+### 1. Citoyen (Rôle : citoyen)
+- Accès à l'espace personnel
+- Possibilité de faire des demandes d'actes :
+  - Acte de naissance
+  - Acte de mariage
+  - Acte de décès
+  - Duplicata d'actes
+- Suivi des demandes personnelles
+- Consultation des actes validés
+- Gestion des paiements
+
+
+
+### 3. Administrateur (Rôle : admin )
+- Accès complet à l'application
+- Gestion des utilisateurs et des rôles
+- Configuration du système
+- Gestion des paramètres généraux
+- Accès aux logs et aux statistiques
+- Gestion des demandes en attente
+- Validation des paiements
+
+## Accès par défaut
+
+### Compte Administrateur
+- Email : admin@etatcivil.ci
+- Mot de passe : password
+- Rôle : Administrateur
+- Accès : /admin/dashboard.php
+
+
+### Compte Citoyen (exemple)
+- Email : exemple@etatcivil.ci
+- Mot de passe : 12345678
+- Rôle : Citoyen
+- Accès : /citoyen/dashboard.php
+
+## Structure des dossiers
+
+```
+etat-civil-ci/
+├── admin/              # Interface administrative
+├── citoyen/           # Interface citoyen
+├── assets/
+│   ├── css/
+│   ├── js/
+│   └── images/
+├── config/
+│   ├── database.php
+│   └── config.php
+├── database/
+│   └── schema.sql
+├── includes/
+│   ├── header.php
+│   └── footer.php
+├── uploads/
+├── index.php
+├── login.php
+├── register.php
+└── README.md
+```
 
 ## Prérequis
 
@@ -74,36 +140,9 @@ define('DB_NAME', 'etat_civil_ci');
 http://localhost/etat-civil-ci
 ```
 
-2. Créez un compte utilisateur ou connectez-vous avec les identifiants par défaut :
-
-- Email : admin@etatcivil.ci
-- Mot de passe : password
+2. Créez un compte utilisateur ou connectez-vous avec les identifiants par défaut
 
 3. Commencez à utiliser l'application pour gérer les demandes d'actes d'état civil
-
-## Structure du projet
-
-```
-etat-civil-ci/
-├── assets/
-│   ├── css/
-│   ├── js/
-│   └── images/
-├── config/
-│   ├── database.php
-│   └── config.php
-├── database/
-│   └── schema.sql
-├── includes/
-│   ├── header.php
-│   └── footer.php
-├── uploads/
-├── index.php
-├── login.php
-├── register.php
-├── dashboard.php
-└── README.md
-```
 
 ## Sécurité
 
@@ -123,10 +162,10 @@ Les contributions sont les bienvenues ! N'hésitez pas à :
 4. Pousser vers la branche
 5. Ouvrir une Pull Request
 
-## Licence
-
-Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
-
 ## Support
 
 Pour toute question ou problème, veuillez ouvrir une issue sur le dépôt GitHub ou contacter l'équipe de support à support@etatcivil.ci
+
+## Licence
+
+Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
